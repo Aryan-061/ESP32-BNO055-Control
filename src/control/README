@@ -1,0 +1,95 @@
+0) 
+PID decides how fast the AUV should rotate to become level. 
+The LQR decides how hard each thruster should push to achieve that rotation in practice.
+
+Structure: (Cascaded controller)
+OOrientation error (tilt)
+        ↓
+Outer loop (PID-like, slow)   ← decides desired motion
+        ↓
+Desired angular rates (ωx_ref, ωy_ref)
+        ↓
+Inner loop (LQR, fast)        ← handles actuators
+        ↓
+Motor commands (DSHOT)
+
+1) 
+Quaternion q_ref = {1, 0, 0, 0}; Sets reference orientation for the IMU (perfectly level) w=1, i,j,k or rotation about(x,y,z) = 0, no rotation just 1 unit magnitude.//unit norm not magnitude
+
+2) 
+Quaternion q_err = quatMultiply(q_ref,quatConjugate(state.q));
+quatNormalize(q_err); which implies that - 
+where state.q = current orientation, q_ref = desired orientation, and q_err = orientation error.
+*The attitude error quaternion represents the rotation needed to go from the current orientation to the desired orientation.*
+
+3) 
+float ex = q_err.x;*ex how much the AUV is tilted to the left or right(roll)*
+float ey = q_err.y;*ey how much it is tilted forward/back(pitch)*
+*x ≈ roll error*
+*y ≈ pitch error*
+REASON:
+A rotation quaternion looks like:
+
+q = [ cos(θ/2), sin(θ/2) * u_x, sin(θ/2) * u_y, sin(θ/2) * u_z ]
+
+For small angles:
+
+sin(θ/2) ≈ θ/2
+cos(θ/2) ≈ 1
+
+So the quaternion becomes approximately:
+
+q ≈ [ 1, θ_x / 2, θ_y / 2, θ_z / 2 ]
+*This shows that, for small angles, the vector part of the quaternion is directly proportional to the rotation angles.*
+
+//For small tilts, the vector part of the error quaternion (x, y) is approximately equal to the roll and pitch error in radians.
+//This approximation is valid because the controller operates near the level orientation.
+Reason for not using z rotation or yaw: yaw doesn't affect balance, we need to stabilize attitude not heading.
+
+4) 
+What the outer PID loop does -
+//
+int_err_x += ex * dt;
+int_err_y += ey * dt;
+
+float wx_ref = Kp_att * ex + Ki_att * int_err_x;
+float wy_ref = Kp_att * ey + Ki_att * int_err_y;
+//
+
+Kp - The *more* the AUV is tilted, the *faster* it should rotate back.
+Ki - The *longer* its been tilted for, the *harder* it pushes to fix it.
+*The integral term is clamped to prevent windup.*
+It gives the output of the desired angular velocities (wx_ref, wy_ref) to the inner LQR loop.
+*The PID doesnt talk to the thrusters directly it only decides the desired motion and is not in charge of actuation.*
+
+5) 
+Inner LQR loop (Linear Quadratic Regulator)-
+The inner LQR loop takes the desired angular velocities and compares them to the measured angular velocities (state.wx, state.wy) to get the error in angular velocity (omega_err). 
+---> Then it uses the LQR gain matrix K_lqr to compute the motor  
+     commands u[3] for each thruster.
+//
+float omega_err[2] = {
+    state.wx - wx_ref,
+    state.wy - wy_ref
+};
+//
+i) If omega_err = 0 the AUV is rotating at the desired angular 
+   velocity and no correction is needed. 
+ii) If omega_err > 0 the AUV is rotating too fast and needs to 
+    slow down
+iii) If omega_err < 0 the AUV is rotating too slow and needs to 
+     speed up. 
+*The LQR gain matrix K_lqr determines how much each thruster should contribute to correcting the error in angular velocity.*
+//
+6) 
+u[i] = -(K_lqr[i][0] * omega_err[0] + K_lqr[i][1] * omega_err[1]);
+*LQR converts the error in angular velocity into coordinated
+motor commands for each thruster.*
+The output u[3] is then converted to DSHOT commands for the thrusters using the clampDSHOT function, 
+which ensures that the commands are within the valid range for the thrusters.
+The range for forward thrust is 48 - 1048 and for reverse thrust is 1049 - 2048.
+7) 
+MOTOR OUTPUT AND DSHOT MAPPING - ~
+
+Summary 
+//The outer PID loop decides how fast the AUV should rotate to correct tilt, while the inner LQR loop decides how each thruster should push to achieve that rotation efficiently and stably.

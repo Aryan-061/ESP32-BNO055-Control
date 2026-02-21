@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../../LinuxProjects(VsCode)"
+		},
+		{
+			"name": "VichaarakBNO",
+			"path": "../../../../../../VichaarakBNO"
+		},
+		{
+			"name": "ESP32BNO",
+			"path": "../../../../../../ESP32BNO"
+		},
+		{
+			"name": "BNO055_ESP_Control",
+			"path": "../.."
+		}
+	],
+	"settings": {}
+}
