@@ -1,18 +1,4 @@
-0) 
-PID decides how fast the AUV should rotate to become level. 
-The LQR decides how hard each thruster should push to achieve that rotation in practice.
-
-Structure: (Cascaded controller)
-OOrientation error (tilt)
-        ↓
-Outer loop (PID-like, slow)   ← decides desired motion
-        ↓
-Desired angular rates (ωx_ref, ωy_ref)
-        ↓
-Inner loop (LQR, fast)        ← handles actuators
-        ↓
-Motor commands (DSHOT)
-
+Control specific readme-
 1) 
 Quaternion q_ref = {1, 0, 0, 0}; Sets reference orientation for the IMU (perfectly level) w=1, i,j,k or rotation about(x,y,z) = 0, no rotation just 1 unit magnitude.//unit norm not magnitude
 
@@ -88,8 +74,3 @@ motor commands for each thruster.*
 The output u[3] is then converted to DSHOT commands for the thrusters using the clampDSHOT function, 
 which ensures that the commands are within the valid range for the thrusters.
 The range for forward thrust is 48 - 1048 and for reverse thrust is 1049 - 2048.
-7) 
-MOTOR OUTPUT AND DSHOT MAPPING - ~
-
-Summary 
-//The outer PID loop decides how fast the AUV should rotate to correct tilt, while the inner LQR loop decides how each thruster should push to achieve that rotation efficiently and stably.
