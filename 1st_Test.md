@@ -8,9 +8,9 @@ iii) Validity of custom library using hard i2c reads(for IMU), instead of using 
 iv) Controls on ESP32 with IMU
 System behavior during:
 
-a)Small tilts
+a) Small tilts
 
-b)Large tilts (approaching ±90°)
+b) Large tilts (approaching ±90°)
 
 Key Observations:
 1. Stable Orientation Estimates -
